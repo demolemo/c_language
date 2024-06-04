@@ -29,6 +29,21 @@ int main() {
     printf("%s -> %s\n", s5, s2);
     flush(s2);
 
+    char s6[] = "-a-k";
+    expand(s6, s2);
+    printf("%s -> %s\n", s6, s2);
+    flush(s2);
+
+    char s7[] = "0-9-";
+    expand(s7, s2);
+    printf("%s -> %s\n", s7, s2);
+    flush(s2);
+
+    char s8[] = "-A-Ma-m-";
+    expand(s8, s2);
+    printf("%s -> %s\n", s8, s2);
+    flush(s2);
+
     return 0;
 }
 
@@ -47,9 +62,11 @@ void expand(char s1[], char s2[]) {
 
     for (i = 0; s1[i] != '\0'; ++i) 
        ++len;
-
+    
+    if (s1[0] == '-')
+        s2[j++] = '-';
     for (i = 0; i < len - 2; ++i) {
-        if (s1[i + 1] == '-' && i >= 1 && s1[i - 1] == '-') {
+        if (s1[i + 1] == '-' && i > 1 && s1[i - 1] == '-') {
             for (c = s1[i] + 1; c <= s1[i + 2]; ++c) {
                 s2[j++] = c;
             }
@@ -61,4 +78,6 @@ void expand(char s1[], char s2[]) {
             i++;
         }
     }
+    if (s1[len - 1] == '-')
+        s2[j++] = '-';
 }
