@@ -197,8 +197,9 @@ int getcomplexop(char s[], int c) {
     }
     
     /* leave only one char in array */
-    for (;i > 0; --i)
+    for (;i > 0; --i) {
         ungetch(s[i]);
+    }
 
     return 0;
 }
@@ -273,6 +274,19 @@ void ungetch(int c) {
         printf("ungetch: too many characters\n");
     } else {
         buf[bufp++] = c;
+    }
+}
+
+/* push line back on input */
+void ungets(char s[]) {
+    int i = 0;
+    
+    while (bufp < BUFSIZE && s[i] != '\0') {
+        buf[bufp++] = s[i++];
+    }
+
+    if (bufp >= BUFSIZE) {
+        printf("ungets: too many characters\n");
     }
 }
 
