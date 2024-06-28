@@ -3,20 +3,39 @@
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
+#include "map.c"
 
 #define MAXOP 100 /* max size of operand or operator */ 
 #define NUMBER '0' /* signal that a number was found */
 #define MATH '1' /* signal that a math function was found */
+#define VAR_OPERAND '2' /* variaoble as operand */
+#define VAR_OPERATOR '3' /* varibale as operator */
+#define MATH_FUNCS 9 /* number of math functions */
 
 int getop(char []);
 void push(double);
 double pop(void);
+double torad(double);
+
+/* 0 - trig functions expect radians */
+/* 1 - trig functions expect degrees */
+int TRIG_MODE = 0; 
+double VARS[27]; /* store all one-char variables & ans */
 
 /* reverse Polish calculator */
 int main() {
     int type;
     double op2;
+    double var;
     char s[MAXOP];
+    
+    printf("this is a polish calculator\n");
+    printf("operand operand operator\n");
+    printf("to switch in radian mode input rad, to switch into degree mode input deg\n");
+
+    for (int i = 0; i < 26; i++) {
+        VARS[i] = 0;
+    }
 
     while ((type = getop(s)) != EOF) {
         switch (type) {
@@ -24,17 +43,52 @@ int main() {
                 push(atof(s));
                 break;
             case MATH:
-                if (strcmp(s,"sin"))
-                    push(sin(pop()));
-                else if (strcmp(s, "cos"))
-                    push(cos(pop()));
-                else if (strcmp(s, "sqrt"))
+                if (strcmp(s,"sin") == 0) {
+                    double d = torad(pop());
+                    push(sin(d));
+                } else if (strcmp(s, "cos") == 0) {
+                    double d = torad(pop());
+                    push(cos(d));
+                } else if (strcmp(s, "tan") == 0) {
+                    double d = torad(pop());
+                    push(tan(d));
+                } else if (strcmp(s, "cot") == 0) {
+                    double d = torad(pop());
+                    push(1.0 / tan(d));
+                } else if (strcmp(s, "rad") == 0) {
+                    TRIG_MODE = 0;
+                    printf("mode: rad\n");
+                    push(0.0);
+                } else if (strcmp(s, "deg") == 0) {
+                    TRIG_MODE = 1;
+                    printf("mode: deg\n");
+                    push(0.0);
+                } else if (strcmp(s, "sqrt") == 0) {
                     push(sqrt(pop()));
-                else if (strcmp(s, "pow")) {
+                } else if (strcmp(s, "exp") == 0) {
+                    push(exp(pop()));
+                } else if (strcmp(s, "pow") == 0) {
                     op2 = pop();
                     push(pow(pop(), op2));
-                } else
+                } else {
                     printf("error: unknown math func %s\n", s);
+                }
+                break;
+            case VAR_OPERAND:
+                if (strcmp(s, "ans") == 0) {
+                    var = VARS[26];
+                } else {
+                    var = VARS[s[0] - 'a'];
+                }
+                push(var);
+                break;
+            case VAR_OPERATOR:
+                if (strcmp(s, "ans") == 0) {
+                    var = VARS[26];
+                } else {
+                    VARS[s[0] - 'a'] = var = pop(); 
+                }
+                push(var);
                 break;
             case '+':
                 push(pop() + pop());
@@ -61,7 +115,9 @@ int main() {
                 } else
                     printf("error: zero divisor\n");
             case '\n':
-                printf("\t%.8g\n", pop());
+                op2 = pop();
+                printf("\t%.8g\n", op2);
+                VARS[26] = op2;
                 break;
             default:
                 printf("error: unknown command %s\n", s);
@@ -102,13 +158,61 @@ void ungetch(int);
 char buf[BUFSIZE]; /* buffer for ungetch */
 
 
-/* getop: get next character or numeric operand */ 
+double torad(double d) {
+    if (TRIG_MODE == 0) {
+        return d;
+    }
+    return d * M_PI / 180.0;
+}
+
+int getcomplexop(char s[], int c) {
+    int i;
+
+    i = 0;
+    while (isalpha(s[++i] = c = getch()))
+        ;
+
+    s[i] = '\0';
+    if (c != EOF) {
+        ungetch(c);
+    }
+    
+    char func[MATH_FUNCS][5] = {
+        "sin", "cos", "tan", "cot", "pow", "exp", "sqrt", "rad", "deg",
+    };
+    
+    /* check math functions */
+    for (int j = 0; j < MATH_FUNCS; ++j) {
+        if (strcmp(s, func[j]) == 0)
+            return MATH;
+    }
+    
+    /* check last used variable */
+    if (strcmp(s, "ans") == 0 && (c = getch()) == ' ') { 
+        ungetch(c);
+        return VAR_OPERAND;
+    } else {
+        ungetch(c);
+        return VAR_OPERATOR;
+    }
+    
+    /* leave only one char in array */
+    for (;i > 0; --i)
+        ungetch(s[i]);
+
+    return 0;
+}
+
+/* idx = var - 'a' */
+
+/* getop: get next character, operand or variable */ 
 int getop(char s[]) {
     int i, c, c1;
     while ((s[0] = c = getch()) == ' ' || c == '\t') ;
     s[1] = '\0';
-    if (!isdigit(c) && c != '.' && c != '-')
-        return c; /* not a number */
+    if (!isdigit(c) && !isalpha(c) && c != '.' && c != '-' ) {
+        return c; /* not a number, letter or minus sign */
+    }
     
     i = 0;
     if (c == '-') {
@@ -117,10 +221,29 @@ int getop(char s[]) {
             ungetch(c1);
             return c;
         } else {
-            s[++i] = c1;
-            c = c1;
+            s[++i] = c = c1;
         }
-    } 
+    } else if (isalpha(c) && isalpha(c1 = getch())) {
+        ungetch(c1);
+        int op = getcomplexop(s, c);
+        if (op == MATH) {
+            return MATH;
+        } else if (op == VAR_OPERAND) {
+            return VAR_OPERAND;
+        } else if (op == VAR_OPERATOR) {
+            return VAR_OPERATOR;
+        } else {
+            return c;
+        }
+    } else if (isalpha(c) && c1 == ' ') {
+        ungetch(c1);
+        printf("current buffer: %s\n", s);
+        return VAR_OPERAND;
+    } else if (isalpha(c) && c1 == '\n') {
+        ungetch(c1);
+        printf("current buffer: %s\n", s);
+        return VAR_OPERATOR;
+    }
 
     if (isdigit(c)) /* collect integer part */ 
         while (isdigit(s[++i] = c = getch()))
@@ -131,55 +254,9 @@ int getop(char s[]) {
     s[i] = '\0';
     if (c != EOF)
         ungetch(c);
+    printf("current buffer: %s\n", s);
     return NUMBER;
 }
-
-
-//int getop(char s[]) {
-//    int i, c, c1;
-//    while ((s[0] = c = getch()) == ' ' || c == '\t') 
-//        ;
-//    s[1] = '\0';
-//   
-//    i = 0;
-//    if (c == '-' && (c1 = getch()) && (c1 == ' ' || c1 == '\n' || c1 == EOF)) {
-//        ungetch(c1);
-//        return c;
-//    } else { // keep collecting after minus
-//        printf("ungeted char: %c\n", c1);
-//        ungetch(c1);
-//    }
-//
-//    while ((s[++i] = c = getch()) && c != ' ' && c != EOF && c != '\n')
-//        printf("added char: %c\n", c)
-//       ;
-//    
-//    /*
-//    if (isdigit(c)) // collect integer part
-//       while (isdigit(s[++i] = c = getch()))
-//            ;
-//    if (c == '.') // collect fraction part
-//        while (isdigit(s[++i] = c = getch()))
-//            ;
-//    */
-//    
-//    s[i] = '\0';
-//    if (c != EOF)
-//        ungetch(c);
-//
-//    printf("strcmp res: %d\n", strcmp(s, "sin\0"));
-//    printf("strcmp res: %d\n", strcmp(s, "sin"));
-//    if (
-//            strcmp(s, "sin") == 0 || 
-//            strcmp(s, "cos") == 0|| 
-//            strcmp(s, "sqrt") == 0 || 
-//            strcmp(s, "pow") == 0
-//    ) {
-//        printf("this");
-//        return MATH;
-//    }
-//    return NUMBER;
-//}
 
 // #define BUFSIZE 100
 // char buf[BUFSIZE]; /* buffer for ungetch */
@@ -198,4 +275,5 @@ void ungetch(int c) {
         buf[bufp++] = c;
     }
 }
+
 
