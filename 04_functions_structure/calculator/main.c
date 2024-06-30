@@ -157,7 +157,6 @@ void ungetch(int);
 #define BUFSIZE 100
 char buf[BUFSIZE]; /* buffer for ungetch */
 
-
 double torad(double d) {
     if (TRIG_MODE == 0) {
         return d;
@@ -203,8 +202,6 @@ int getcomplexop(char s[], int c) {
 
     return 0;
 }
-
-/* idx = var - 'a' */
 
 /* getop: get next character, operand or variable */ 
 int getop(char s[]) {
@@ -253,13 +250,13 @@ int getop(char s[]) {
         while (isdigit(s[++i] = c = getch()))
             ;
     s[i] = '\0';
-    if (c != EOF)
+    if (c != EOF) {
         ungetch(c);
+    }
     printf("current buffer: %s\n", s);
     return NUMBER;
 }
 
-// #define BUFSIZE 100
 // char buf[BUFSIZE]; /* buffer for ungetch */
 int bufp = 0; /* next free position in buf */
 
@@ -289,5 +286,4 @@ void ungets(char s[]) {
         printf("ungets: too many characters\n");
     }
 }
-
 
