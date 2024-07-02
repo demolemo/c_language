@@ -9,9 +9,9 @@ char buf[BUFSIZE]; /* buffer for ungetch */
 int getch(void); 
 void ungetch(int);
 
-/* getint: get next integer from input into *pn */ 
-/* this implementation fails if non-alpha chars are passed to input */
-int getint(int *pn) {
+/* gatfloat: get next float from input into *pn */ 
+/* this implementation fails if non-numeric chars are passed to input */
+int getfloat(double *pn) {
     int c, c1, sign;
     while (isspace(c = getch())); /* skip white space */
     if (!isdigit(c) && c != EOF && c != '+' && c != '-') {
@@ -34,6 +34,9 @@ int getint(int *pn) {
     while (isdigit(c = getch())) {
         *pn = 10 * *pn + (c - '0');
     }
+    if (c != '.' && c != EOF) {
+
+    }
     *pn *= sign;
     if (c != EOF) {
         ungetch(c);
@@ -42,15 +45,16 @@ int getint(int *pn) {
 }
 
 int main() {
-    int n, array[SIZE], res;
+    int n, res;
+    double array[SIZE];
 
     for (n = 0; n < SIZE; n++) {
-        res = getint(&array[n]);
+        res = getfloat(&array[n]);
         if (res == EOF) {
             printf("input has ended\n");
             break;
         } else if (res == 1) {
-            printf("non-numeric chars encountere\n");
+            printf("non-numeric chars encountered\n");
             break;
         }
     }
@@ -76,3 +80,4 @@ void ungetch(int c) {
         buf[bufp++] = c;
     }
 }
+
